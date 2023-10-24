@@ -1,6 +1,6 @@
 const UserModel = require("../models/UserModel");
 const jwt = require("jsonwebtoken");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 
 const signin = async (req, res) => {
   try {
@@ -13,7 +13,6 @@ const signin = async (req, res) => {
       return res.status(401).json({ message: "Email does not exists" });
     }
 
-    console.log(user);
     // Validate the password (you should use a secure password hashing library)
     const passwordMatch = await bcrypt.compare(password, user.password);
 
@@ -23,8 +22,11 @@ const signin = async (req, res) => {
 
     // Generate a JWT token
     const token = jwt.sign({ email: user.email }, process.env.SECRET_KEY);
+    const dbUser = await UserModel.findOne({ email });
 
-    res.json({ token });
+    
+
+    res.json({ dbUser,token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error signing in" });

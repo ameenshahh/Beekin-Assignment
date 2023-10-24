@@ -2,46 +2,38 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../models/UserModel");
 
 const authenticate = async (req, res, next) => {
-  const { authorization } = req.headers;
-
-  if (!authorization) {
-    sendResponseError(400, "You are not authorized ", res);
-    return;
-  } else if (!authorization.startsWith("Bearer ")) {
-    sendResponseError(400, "You are not authorized ", res);
-    return;
-  }
-
+  const token = req.header("x-auth-token");
   try {
-    // const payload = await verifyToken(authorization.split(" ")[1]);
-    const payload = jwt.verify(
-      authorization.split(" ")[1],
-      process.env.SECRET_KEY,
-      (err, user) => {
-        if (err) {
-          return res
-            .status(403)
-            .json({ message: "Token verification failed." });
-        }
-
-        req.user = user; // Add the user to the request object
-        next(); // Pass control to the next middleware or route handler
+    jwt.verify(token, process.env.SECRET_KEY, async (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: "Token verification failed." });
       }
-    );
-    console.log(payload);
+      
+      // Inside the callback, user contains the payload
+      req.user = user; // Add the user to the request object
 
-    if (payload) {
-      const user = await UserModel.findById(payload.id, { password: 0 });
+      // You can now access the user object here
+      const payload = user;
+      
+      console.log(`payload is`, payload);
+      if (payload) {
+        const user = await UserModel.findOne({ email: payload.email });
+        
+        req.user= user;
+        console.log(`req is`, req);
 
-      req["user"] = user;
-
-      next();
-    } else {
-      sendResponseError(400, `you are not authorized`, res);
-    }
+        next();
+      } else {
+        return res
+          .status(400)
+          .json({ status: false, message: "you are not authorized" });
+      }
+    });
   } catch (err) {
     console.log("Error ", err);
-    sendResponseError(400, `Error ${err}`, res);
+    return res
+      .status(400)
+      .json({ status: false, message: "Something went wrong" });
   }
 };
 
